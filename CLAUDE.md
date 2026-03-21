@@ -88,23 +88,41 @@ Managed via Conan 2 (`conanfile.py`). Key dependencies:
 
 ## CI/CD
 
-Local CI uses a GitHub Actions self-hosted runner in a Podman container.
+Local CI uses a GitHub Actions self-hosted runner on `100.85.32.4` (accessible via SSH) running in a Docker container.
 
 ```bash
 # One-time setup:
 # 1. Get a runner token from https://github.com/hoanghai20021989/selena/settings/actions/runners/new
 # 2. Build image and start runner:
 ./devtools/ci/setup-runner.sh <RUNNER_TOKEN>
-
-# Check runner logs
-podman logs -f selena-runner
-
-# Stop / restart
-podman stop selena-runner
-podman start selena-runner
 ```
 
-CI triggers on push to `main` and on pull requests. The workflow (`.github/workflows/ci.yml`) runs configure, build, and test.
+CI triggers on push to `main` and on pull requests. The workflow (`.github/workflows/ci.yml`) runs configure, build, and test. Branch protection requires CI to pass before merging. PRs auto-merge (squash) when CI passes.
+
+### Runner Management
+
+The runner lives on `100.85.32.4` as a Docker container named `selena-runner`.
+
+```bash
+# Check runner status
+ssh 100.85.32.4 "docker logs --tail 10 selena-runner"
+
+# Simple restart (if runner is just stopped/hung)
+ssh 100.85.32.4 "docker restart selena-runner"
+
+# Full re-register (if config is corrupted or runner won't start)
+# 1. Get a fresh token:
+gh api -X POST repos/hoanghai20021989/selena/actions/runners/registration-token --jq '.token'
+# 2. Remove old container and config volume:
+ssh 100.85.32.4 "docker rm -f selena-runner && docker volume rm selena-runner-config"
+# 3. Start with new token:
+ssh 100.85.32.4 "docker run -d --name selena-runner --restart unless-stopped \
+    -v selena-runner-config:/opt/actions-runner \
+    -v selena-ccache:/home/runner/.cache/ccache \
+    -v selena-conan:/home/runner/.conan2 \
+    --entrypoint /bin/bash selena-ci \
+    -c 'cd /opt/actions-runner && ./config.sh --url https://github.com/hoanghai20021989/selena --token <TOKEN> --name selena-local --labels self-hosted,linux --unattended --replace && ./run.sh'"
+```
 
 ### CI Files
 
