@@ -1,7 +1,13 @@
 # Build directories
+_build/
+_build.current
+_run/
 build/
 cmake-build-*/
 out/
+
+# Virtual environment
+_venv
 
 # Conan
 CMakeUserPresets.json
@@ -19,6 +25,10 @@ CMakeUserPresets.json
 *.a
 *.so
 *.dylib
+
+# Generated protobuf
+*.pb.h
+*.pb.cc
 
 # OS
 .DS_Store
