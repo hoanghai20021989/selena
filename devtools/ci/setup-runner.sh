@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# Setup script for GitHub Actions self-hosted runner in a Podman container
+# Setup script for GitHub Actions self-hosted runner in a container
 # Usage: ./devtools/ci/setup-runner.sh <GITHUB_RUNNER_TOKEN>
 #
 # Get a runner token from:
@@ -13,6 +13,19 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 IMAGE_NAME="selena-ci"
 CONTAINER_NAME="selena-runner"
 REPO_URL="https://github.com/hoanghai20021989/selena"
+
+# ---------------------------------------------------------------------------
+# Detect container runtime (prefer docker, fall back to podman)
+# ---------------------------------------------------------------------------
+if command -v docker &>/dev/null && docker info &>/dev/null; then
+    CTR=docker
+elif command -v podman &>/dev/null; then
+    CTR=podman
+else
+    echo "Error: neither docker nor podman found"
+    exit 1
+fi
+echo "Using container runtime: ${CTR}"
 
 # ---------------------------------------------------------------------------
 # Parse args
@@ -30,26 +43,23 @@ RUNNER_TOKEN="$1"
 # Build the CI image
 # ---------------------------------------------------------------------------
 echo "Building CI container image..."
-podman build -t "${IMAGE_NAME}" -f "${SCRIPT_DIR}/Containerfile" "${REPO_ROOT}"
+${CTR} build -t "${IMAGE_NAME}" -f "${SCRIPT_DIR}/Containerfile" "${REPO_ROOT}"
 
 # ---------------------------------------------------------------------------
 # Stop existing runner if any
 # ---------------------------------------------------------------------------
-if podman container exists "${CONTAINER_NAME}" 2>/dev/null; then
-    echo "Stopping existing runner..."
-    podman stop "${CONTAINER_NAME}" 2>/dev/null || true
-    podman rm "${CONTAINER_NAME}" 2>/dev/null || true
-fi
+echo "Removing existing runner container (if any)..."
+${CTR} rm -f "${CONTAINER_NAME}" 2>/dev/null || true
 
 # ---------------------------------------------------------------------------
 # Configure and start the runner
 # ---------------------------------------------------------------------------
 echo "Configuring runner..."
-podman run -d \
+${CTR} run -d \
     --name "${CONTAINER_NAME}" \
-    --replace \
-    -v "${HOME}/.cache/ccache:/home/runner/.cache/ccache:Z" \
-    -v "${HOME}/.conan2:/home/runner/.conan2:Z" \
+    --restart unless-stopped \
+    -v selena-ccache:/home/runner/.cache/ccache \
+    -v selena-conan:/home/runner/.conan2 \
     --entrypoint /bin/bash \
     "${IMAGE_NAME}" \
     -c "
@@ -60,10 +70,10 @@ podman run -d \
 
 echo ""
 echo "Runner is starting. Check status with:"
-echo "  podman logs -f ${CONTAINER_NAME}"
+echo "  ${CTR} logs -f ${CONTAINER_NAME}"
 echo ""
 echo "To stop:"
-echo "  podman stop ${CONTAINER_NAME}"
+echo "  ${CTR} stop ${CONTAINER_NAME}"
 echo ""
 echo "To restart:"
-echo "  podman start ${CONTAINER_NAME}"
+echo "  ${CTR} start ${CONTAINER_NAME}"
