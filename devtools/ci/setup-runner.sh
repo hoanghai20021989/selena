@@ -53,18 +53,23 @@ ${CTR} rm -f "${CONTAINER_NAME}" 2>/dev/null || true
 
 # ---------------------------------------------------------------------------
 # Configure and start the runner
+# Runner config is persisted in a named volume so restarts don't re-register.
+# On first run: config.sh + run.sh. On restart: just run.sh.
 # ---------------------------------------------------------------------------
 echo "Configuring runner..."
 ${CTR} run -d \
     --name "${CONTAINER_NAME}" \
     --restart unless-stopped \
+    -v selena-runner-config:/opt/actions-runner \
     -v selena-ccache:/home/runner/.cache/ccache \
     -v selena-conan:/home/runner/.conan2 \
     --entrypoint /bin/bash \
     "${IMAGE_NAME}" \
     -c "
         cd /opt/actions-runner
-        ./config.sh --url ${REPO_URL} --token ${RUNNER_TOKEN} --name selena-local --labels self-hosted,linux --unattended --replace
+        if [ ! -f .runner ]; then
+            ./config.sh --url ${REPO_URL} --token ${RUNNER_TOKEN} --name selena-local --labels self-hosted,linux --unattended --replace
+        fi
         ./run.sh
     "
 
