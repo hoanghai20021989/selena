@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUILD_TYPE: Debug
+  BUILD_DIR: _build/clang_Debug
+
+jobs:
+  build-and-test:
+    runs-on: self-hosted
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache Conan packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.conan2
+          key: conan-${{ hashFiles('conanfile.py') }}
+          restore-keys: conan-
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-${{ github.sha }}
+          restore-keys: ccache-
+
+      - name: Configure
+        run: ./configure.sh --skip-conan || ./configure.sh
+
+      - name: Build
+        run: ninja -C ${{ env.BUILD_DIR }}
+
+      - name: Test
+        run: ninja -C ${{ env.BUILD_DIR }} tests_fast

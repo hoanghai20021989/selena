@@ -85,6 +85,32 @@ Managed via Conan 2 (`conanfile.py`). Key dependencies:
 - tsl-robin-map (fast hash maps)
 - gtest, benchmark (testing)
 
+## CI/CD
+
+Local CI uses a GitHub Actions self-hosted runner in a Podman container.
+
+```bash
+# One-time setup:
+# 1. Get a runner token from https://github.com/hoanghai20021989/selena/settings/actions/runners/new
+# 2. Build image and start runner:
+./devtools/ci/setup-runner.sh <RUNNER_TOKEN>
+
+# Check runner logs
+podman logs -f selena-runner
+
+# Stop / restart
+podman stop selena-runner
+podman start selena-runner
+```
+
+CI triggers on push to `main` and on pull requests. The workflow (`.github/workflows/ci.yml`) runs configure, build, and test.
+
+### CI Files
+
+- `devtools/ci/Containerfile` — CI container image (Fedora + clang/cmake/ninja/conan)
+- `devtools/ci/setup-runner.sh` — Script to build image and register runner
+- `.github/workflows/ci.yml` — GitHub Actions workflow
+
 ## Key Files
 
 - `CMakeLists.txt` — Root CMake config

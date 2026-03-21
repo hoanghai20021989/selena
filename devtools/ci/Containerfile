@@ -1,0 +1,43 @@
+# CI build environment for Selena
+# Build: podman build -t selena-ci -f devtools/ci/Containerfile .
+FROM fedora:43
+
+# Build toolchain
+RUN dnf install -y \
+        clang \
+        cmake \
+        ninja-build \
+        ccache \
+        python3 \
+        python3-pip \
+        python3-virtualenv \
+        git \
+        curl \
+        jq \
+        valgrind \
+        libstdc++-devel \
+        libstdc++-static \
+    && dnf clean all
+
+# Conan
+RUN pip3 install --break-system-packages "conan>=2.0"
+
+# GitHub Actions runner
+ARG RUNNER_VERSION=2.321.0
+ARG RUNNER_ARCH=x64
+RUN mkdir -p /opt/actions-runner \
+    && cd /opt/actions-runner \
+    && curl -sL "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz" \
+       | tar xz \
+    && ./bin/installdependencies.sh 2>/dev/null || true
+
+# Runner user (cannot run as root)
+RUN useradd -m runner \
+    && chown -R runner:runner /opt/actions-runner
+
+# Pre-warm Conan default profile
+USER runner
+RUN conan profile detect
+
+WORKDIR /opt/actions-runner
+ENTRYPOINT ["./run.sh"]
