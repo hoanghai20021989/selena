@@ -100,6 +100,10 @@ Local CI runs on a GitHub Actions self-hosted runner in a container.
 
 CI triggers on push to `main` and on pull requests. See [CLAUDE.md](CLAUDE.md) for details.
 
+## Versioning
+
+This project follows [Semantic Versioning](https://semver.org/) (MAJOR.MINOR.PATCH). Version is derived from git tags via `cmake/modules/Versioning.cmake`.
+
 ## License
 
 Proprietary. All rights reserved.

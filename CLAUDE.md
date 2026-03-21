@@ -58,6 +58,7 @@ cd _build/clang_Release && ninja
 - Each library has a CMake target named `engine_<name>` (e.g., `engine_core`, `engine_async`).
 - Tests use Google Test. Test targets are created via `engine_add_test()` from `cmake/modules/SetupTest.cmake`.
 - Protobuf definitions live under `libs/<name>/proto/src/engine/<name>/`.
+- **Versioning** follows [Semantic Versioning](https://semver.org/) (MAJOR.MINOR.PATCH). Version is extracted from git tags via `cmake/modules/Versioning.cmake`.
 
 ## Adding a New Library
 
