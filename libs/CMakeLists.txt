@@ -1,0 +1,7 @@
+add_subdirectory(core)
+add_subdirectory(async)
+add_subdirectory(execution)
+add_subdirectory(services)
+add_subdirectory(risk)
+add_subdirectory(strategy)
+add_subdirectory(engine)

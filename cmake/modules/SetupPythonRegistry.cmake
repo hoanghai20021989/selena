@@ -1,0 +1,52 @@
+# Python module path registry for .pth and mypy.ini generation
+set(PYTHON_VENV_FOLDER "${CMAKE_SOURCE_DIR}/_venv/")
+set(PYTHON_PACKAGES_FOLDER "${PYTHON_VENV_FOLDER}/lib/python${PY_VER_MAJMIN}/site-packages/")
+
+define_property(GLOBAL PROPERTY PYTHON_MODULE_PATHS
+    BRIEF_DOCS "List of Python module paths to add to .pth file"
+    FULL_DOCS "Global registry of Python module directories"
+)
+
+function(register_python_path PATH)
+    get_filename_component(ABS_PATH "${PATH}" ABSOLUTE)
+    get_property(CURRENT_PATHS GLOBAL PROPERTY PYTHON_MODULE_PATHS)
+    if(NOT "${ABS_PATH}" IN_LIST CURRENT_PATHS)
+        set_property(GLOBAL APPEND PROPERTY PYTHON_MODULE_PATHS "${ABS_PATH}")
+        message(STATUS "Registered Python path: ${ABS_PATH}")
+    endif()
+endfunction()
+
+function(create_pth_file)
+    get_property(ALL_PATHS GLOBAL PROPERTY PYTHON_MODULE_PATHS)
+    if(NOT ALL_PATHS)
+        return()
+    endif()
+    list(REMOVE_DUPLICATES ALL_PATHS)
+    string(REPLACE ";" "\n" PTH_CONTENT "${ALL_PATHS}")
+    set(PTH_FILE "${PYTHON_PACKAGES_FOLDER}/${PROJECT_NAME}.pth")
+    file(WRITE "${PTH_FILE}" "${PTH_CONTENT}\n")
+    message(STATUS "Created .pth file: ${PTH_FILE}")
+endfunction()
+
+function(create_mypy_ini)
+    get_property(ALL_PATHS GLOBAL PROPERTY PYTHON_MODULE_PATHS)
+    if(NOT ALL_PATHS)
+        return()
+    endif()
+    list(REMOVE_DUPLICATES ALL_PATHS)
+    string(REPLACE ";" "\n    " MYPY_PATHS "${ALL_PATHS}")
+    set(MYPY_INI_CONTENT "[mypy]\nmypy_path = \n    ${MYPY_PATHS}\nexplicit_package_bases = true\nignore_missing_imports = false\nwarn_return_any = true\nshow_error_codes = true\n")
+    file(WRITE "${CMAKE_SOURCE_DIR}/mypy.ini" "${MYPY_INI_CONTENT}")
+    message(STATUS "Created mypy.ini")
+endfunction()
+
+function(finalize_python_paths)
+    get_property(ALL_PATHS GLOBAL PROPERTY PYTHON_MODULE_PATHS)
+    if(NOT ALL_PATHS)
+        return()
+    endif()
+    list(REMOVE_DUPLICATES ALL_PATHS)
+    string(REPLACE ";" "\n" PATHS_CONTENT "${ALL_PATHS}")
+    file(MAKE_DIRECTORY "${PYTHON_VENV_FOLDER}")
+    file(WRITE "${PYTHON_VENV_FOLDER}/registered_paths.txt" "${PATHS_CONTENT}")
+endfunction()
