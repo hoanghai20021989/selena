@@ -124,11 +124,38 @@ ssh 100.85.32.4 "docker run -d --name selena-runner --restart unless-stopped \
     -c 'cd /opt/actions-runner && ./config.sh --url https://github.com/hoanghai20021989/selena --token <TOKEN> --name selena-local --labels self-hosted,linux --unattended --replace && ./run.sh'"
 ```
 
+### Gitea (Self-hosted Git + CI)
+
+Gitea runs on `100.85.32.4` as a Docker Compose stack alongside the CI runner.
+
+```bash
+# Web UI: http://100.85.32.4:3000 (login: selena/selena)
+# Git SSH: ssh://git@100.85.32.4:2222/selena/selena.git
+# Git HTTP: http://100.85.32.4:3000/selena/selena.git
+
+# Setup from scratch:
+./devtools/gitea/setup-gitea.sh
+
+# Manage Gitea services:
+ssh 100.85.32.4 "cd /tmp/selena-gitea && docker compose logs -f"
+ssh 100.85.32.4 "cd /tmp/selena-gitea && docker compose restart"
+
+# Re-register Gitea runner (if runner won't pick up jobs):
+ssh 100.85.32.4 'cd /tmp/selena-gitea && docker compose stop runner && docker compose rm -f runner && docker volume rm -f selena-gitea_runner-data'
+# Then get a new token from Gitea API and restart:
+ssh 100.85.32.4 'RUNNER_TOKEN=$(curl -sf "http://localhost:3000/api/v1/repos/selena/selena/actions/runners/registration-token" -u "selena:selena" | python3 -c "import sys,json; print(json.load(sys.stdin)[\"token\"])") && cd /tmp/selena-gitea && RUNNER_TOKEN=$RUNNER_TOKEN docker compose up -d runner'
+```
+
+Gitea Actions uses `.gitea/workflows/ci.yml` (GitHub Actions compatible syntax). The runner executes jobs inside the `selena-ci` Docker image.
+
 ### CI Files
 
-- `devtools/ci/Containerfile` — CI container image (Fedora + clang/cmake/ninja/conan)
-- `devtools/ci/setup-runner.sh` — Script to build image and register runner
+- `devtools/ci/Containerfile` — CI container image (Fedora + clang/cmake/ninja/conan/nodejs)
+- `devtools/ci/setup-runner.sh` — GitHub Actions self-hosted runner setup
+- `devtools/gitea/docker-compose.yml` — Gitea + act_runner services
+- `devtools/gitea/setup-gitea.sh` — Gitea one-command setup
 - `.github/workflows/ci.yml` — GitHub Actions workflow
+- `.gitea/workflows/ci.yml` — Gitea Actions workflow
 
 ## Key Files
 
