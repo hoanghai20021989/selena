@@ -16,26 +16,35 @@ env:
 
 jobs:
   build-and-test:
-    runs-on: self-hosted
-    timeout-minutes: 30
+    # Try self-hosted first; fall back to GitHub-hosted Ubuntu
+    runs-on: ${{ github.repository_owner == 'hoanghai20021989' && 'self-hosted' || 'ubuntu-latest' }}
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install toolchain (GitHub-hosted only)
+        if: ${{ !contains(runner.name, 'selena') }}
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq clang cmake ninja-build ccache python3-pip python3-venv
+          pip3 install --break-system-packages "conan>=2.0"
+          conan profile detect --exist-ok
+
       - name: Cache Conan packages
         uses: actions/cache@v4
         with:
           path: ~/.conan2
-          key: conan-${{ hashFiles('conanfile.py') }}
-          restore-keys: conan-
+          key: conan-${{ runner.os }}-${{ hashFiles('conanfile.py') }}
+          restore-keys: conan-${{ runner.os }}-
 
       - name: Cache ccache
         uses: actions/cache@v4
         with:
           path: ~/.cache/ccache
-          key: ccache-${{ github.sha }}
-          restore-keys: ccache-
+          key: ccache-${{ runner.os }}-${{ github.sha }}
+          restore-keys: ccache-${{ runner.os }}-
 
       - name: Configure
         run: ./configure.sh --skip-conan || ./configure.sh
