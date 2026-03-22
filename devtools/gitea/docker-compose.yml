@@ -33,7 +33,7 @@ services:
       GITEA_INSTANCE_URL: "http://gitea:3000"
       GITEA_RUNNER_REGISTRATION_TOKEN: "${RUNNER_TOKEN}"
       GITEA_RUNNER_NAME: "selena-runner"
-      GITEA_RUNNER_LABELS: "self-hosted:host"
+      GITEA_RUNNER_LABELS: "self-hosted:docker://selena-ci"
     volumes:
       - runner-data:/data
       - /var/run/docker.sock:/var/run/docker.sock
