@@ -15,6 +15,7 @@ RUN dnf install -y \
         curl \
         jq \
         valgrind \
+        nodejs \
         libstdc++-devel \
         libstdc++-static \
     && dnf clean all
